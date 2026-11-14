@@ -941,9 +941,7 @@ function App() {
                           </button>
                         </div>
                         <div className="info-note">
-                          Phân tích sẽ gửi tối đa 3 khung hình mỗi video, 1
-                          khung mỗi ảnh đến OpenAI. Kết quả được cache; bản đầu
-                          chưa tách shot hoặc phiên âm audio nguồn.
+                          Gemini nhận video/ảnh trực tiếp. Kết quả lưu trong SQLite dùng chung mọi dự án; cùng nội dung file sẽ không gọi API lại.
                         </div>
                         {!project.assets.length ? (
                           <div className="empty-state">
@@ -1438,6 +1436,13 @@ function App() {
                           >
                             Xuất timeline JSON + SRT
                           </button>
+                          <button className="secondary" disabled={!project.output} onClick={() => run(async () => {
+                            if (!window.confirm("Đóng draft 1110 trong CapCut trước khi tiếp tục. Draft hiện tại sẽ được sao lưu và thay bằng một clip MP4 đã render. Tiếp tục?")) return;
+                            const folder = await api!.exportCapCut(project);
+                            setNotice(`Đã xuất draft CapCut (một clip MP4) vào ${folder}. Mở lại draft 1110 trong CapCut.`);
+                          })}>
+                            Xuất draft CapCut (MP4)
+                          </button>
                         </div>
                         {project.output && (
                           <div className="result-card">
@@ -1669,6 +1674,8 @@ function SettingsModal({
   busy: boolean;
 }) {
   const [form, setForm] = useState({
+    geminiKey: "",
+    geminiModel: status?.geminiModel || "gemini-3.8-flash",
     openaiKey: "",
     elevenKey: "",
     model: status?.model || "gpt-4.1-mini",
@@ -1718,6 +1725,9 @@ function SettingsModal({
           }}
         >
           <fieldset disabled={busy || saving}>
+<label>Gemini API key — phân tích video ({status?.geminiConfigured ? "Đã cấu hình" : "Chưa cấu hình"})
+<input type="password" autoComplete="off" value={form.geminiKey} onChange={e => setForm({...form, geminiKey: e.target.value})} placeholder="Để trống để giữ khóa hiện tại" /></label>
+<label>Gemini model<input required value={form.geminiModel} onChange={e => setForm({...form, geminiModel: e.target.value})} /></label>
             <label>
               OpenAI API key{" "}
               <span className="configured">

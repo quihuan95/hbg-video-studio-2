@@ -59,6 +59,8 @@ export const projectSchema = z.object({
   updatedAt: text,
 });
 export const settingsSchema = z.object({
+  geminiKey: z.string().max(500).default(""),
+  geminiModel: z.string().min(1).max(100).default("gemini-3.8-flash"),
   openaiKey: z.string().max(500),
   elevenKey: z.string().max(500),
   model: z.string().min(1).max(100),

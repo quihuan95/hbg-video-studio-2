@@ -54,6 +54,8 @@ export interface Cue {
   text: string;
 }
 export interface Settings {
+  geminiKey: string;
+  geminiModel: string;
   openaiKey: string;
   elevenKey: string;
   model: string;
@@ -61,6 +63,8 @@ export interface Settings {
   voiceModel: string;
 }
 export interface SettingsStatus {
+  geminiConfigured: boolean;
+  geminiModel: string;
   openaiConfigured: boolean;
   elevenConfigured: boolean;
   model: string;
@@ -88,6 +92,7 @@ export interface StudioApi {
   render(project: Project): Promise<Project>;
   saveVideoCopy(project: Project): Promise<Project>;
   exportPlan(project: Project): Promise<string | undefined>;
+  exportCapCut(project: Project): Promise<string>;
   cancel(): Promise<void>;
   reveal(path: string): Promise<void>;
   onProgress(callback: (progress: Progress) => void): () => void;
