@@ -2,6 +2,11 @@ import { z } from "zod";
 const text = z.string().max(20000);
 const path = z.string().max(32768);
 export const beatSchema = z.object({
+  usePlaceholder: z.boolean().optional(),
+  placeholderSource: z.object({ assetId: z.string().max(100), sourceInMs: z.number().int().min(0).max(86400000) }).optional(),
+  sceneDescription: text.optional(),
+  placeholderFor: z.object({ suggestedFootage: text, reason: text, reanalyzeSuggestion: text }).optional(),
+  missingFootage: z.object({ suggestedFootage: text, reason: text, reanalyzeSuggestion: text }).optional(),
   id: z.string().max(100),
   voice: text,
   caption: text,
@@ -11,6 +16,12 @@ export const beatSchema = z.object({
   sourceInMs: z.number().int().min(0).max(86400000),
 });
 export const projectSchema = z.object({
+  backgroundFill: z.enum(["crop", "blur"]).default("crop"),
+  useFootagePlaceholders: z.boolean().default(false),
+  scriptInput: z.string().max(20000).optional(),
+  allowIllustrativeFootage: z.boolean().optional(),
+  requireMatchingFootage: z.boolean().optional(),
+  avoidRepeatedShots: z.boolean().default(true),
   version: z.literal(1),
   id: z.string().uuid(),
   title: text,
@@ -24,6 +35,7 @@ export const projectSchema = z.object({
   assets: z
     .array(
       z.object({
+        placeholder: z.boolean().optional(),
         id: z.string().max(100),
         name: text,
         path,

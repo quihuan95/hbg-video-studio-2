@@ -32,12 +32,12 @@ def main():
     ranges = [(s.get_seconds(), e.get_seconds()) for s, e in scenes] or [(0, duration)]
     # Long uninterrupted scenes are represented by temporal windows, retaining source times.
     windows = []
-    for start, end in ranges:
+    for scene_index, (start, end) in enumerate(ranges):
         count = max(1, math.ceil((end - start) / a.window))
         for i in range(count):
-            windows.append((start + (end-start)*i/count, start + (end-start)*(i+1)/count))
+            windows.append((start + (end-start)*i/count, start + (end-start)*(i+1)/count, scene_index))
     emit({'event': 'detected', 'count': len(windows)})
-    for index, (start, end) in enumerate(windows):
+    for index, (start, end, scene_index) in enumerate(windows):
         length = end-start
         count = 1 if still else (2 if length < 3 else 3 if length <= 10 else min(a.max_frames, max(4, math.ceil(length / 2))))
         # Extra candidates on long shots allow changes between uniform samples to survive deduplication.
@@ -60,7 +60,7 @@ def main():
         # Preserve one representative even if all frames fail quality checks; AI is not called for these.
         if not selected and frames:
             selected = [max(frames, key=lambda f: f['blur'])]
-        emit({'event': 'shot', 'index': index, 'startMs': round(start*1000), 'endMs': round(end*1000), 'frames': selected})
+        emit({'event': 'shot', 'index': index, 'sceneIndex': scene_index, 'startMs': round(start*1000), 'endMs': round(end*1000), 'frames': selected})
 
 if __name__ == '__main__':
     try:

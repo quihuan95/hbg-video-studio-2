@@ -79,6 +79,7 @@ test("timeline giữ timecode nguồn và tạo khoảng liên tiếp", () => {
 });
 test("từ chối đoạn vượt nguồn, thiếu asset và tổng duration sai", () => {
   const p = fixture();
+  p.avoidRepeatedShots = false; // This test isolates source and total-duration validation.
   p.beats[1].sourceInMs = 6000;
   assert.throws(() => validateTimeline(p), /vượt thời lượng nguồn/);
   p.beats[1].sourceInMs = 0;

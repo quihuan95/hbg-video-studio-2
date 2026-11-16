@@ -21,6 +21,7 @@ export const semanticSchema = z.object({
 });
 export type Semantic = z.infer<typeof semanticSchema>;
 export interface Shot {
+  sceneId?: string;
   id: string; hash: string; file: string; startMs: number; endMs: number;
   frames: { path: string; timestampMs: number; blur: number; duplicate: boolean; informative: boolean }[];
   status: string; semantic?: Semantic; model?: string; error?: string;

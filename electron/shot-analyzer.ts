@@ -72,7 +72,7 @@ export class ShotAnalyzer {
             const event = JSON.parse(line);
             if (event.event === "metadata") this.db.prepare("INSERT OR REPLACE INTO files VALUES (?, ?, ?, ?, ?)").run(hash, PIPELINE, file, JSON.stringify(event), "detecting");
             if (event.event === "shot") {
-              this.put({ id: `${hash}:${PIPELINE}:${event.index}`, hash, file, startMs: event.startMs, endMs: event.endMs, frames: event.frames, status: "pending", pass: 0 });
+              this.put({ id: `${hash}:${PIPELINE}:${event.index}`, sceneId: `${hash}:scene:${event.sceneIndex}`, hash, file, startMs: event.startMs, endMs: event.endMs, frames: event.frames, status: "pending", pass: 0 });
               this.notify(`Đã trích frame shot ${event.index + 1}: ${path.basename(file)}`, 0);
             }
           } catch (e) { failure = e as Error; child.kill(); }

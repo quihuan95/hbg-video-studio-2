@@ -31,11 +31,21 @@ export function fitVoiceTimeline(p: Project): void {
 export function validateTimeline(project: Project, requireVoice = false): void {
   if (!project.beats.length) throw new Error("Timeline chưa có cảnh.");
   const ids = new Set<string>();
+  const used = new Map<string, { start: number; end: number; index: number }[]>();
   for (const [i, b] of project.beats.entries()) {
+    if (b.missingFootage) throw new Error(`Cảnh ${i+1} đang chờ bổ sung footage: ${b.missingFootage.suggestedFootage}`);
     if (ids.has(b.id)) throw new Error("ID cảnh bị trùng.");
     ids.add(b.id);
     const asset = project.assets.find((a) => a.id === b.assetId && !a.error);
     if (!asset) throw new Error(`Cảnh ${i + 1} chưa chọn footage hợp lệ.`);
+    if (project.avoidRepeatedShots !== false) {
+      const key = asset.path.replace(/\\/g, "/").toLowerCase();
+      const previous = used.get(key) || [];
+      const overlap = previous.find(r => asset.kind === "image" || (b.sourceInMs < r.end && b.sourceInMs + b.durationMs > r.start));
+      if (overlap) throw new Error(`NEEDS_INPUT: Cảnh ${i + 1} lặp footage với cảnh ${overlap.index + 1}. Hãy chọn shot khác, đổi đoạn nguồn hoặc bổ sung footage.`);
+      previous.push({ start: b.sourceInMs, end: b.sourceInMs + b.durationMs, index: i });
+      used.set(key, previous);
+    }
     if (
       !Number.isInteger(b.durationMs) ||
       b.durationMs < 100 ||

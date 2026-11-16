@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clapperboard,
-  Clock3,
   Download,
   Film,
   FolderOpen,
@@ -28,7 +27,6 @@ import {
 } from "lucide-react";
 import {
   createProject,
-  timeline,
   voiceSignature,
   type Project,
   type Asset,
@@ -38,6 +36,9 @@ import {
 } from "../shared/types";
 import "./styles.css";
 import { FootageAnalyzer } from "./FootageAnalyzer";
+import { FootagePicker } from "./FootagePicker";
+import { ScenePreview } from "./ScenePreview";
+import { sceneDescription } from "../shared/scene-description";
 declare global {
   interface Window {
     studio?: StudioApi;
@@ -48,7 +49,7 @@ const media = (p?: string) =>
   p ? `hbg-media://local/${encodeURIComponent(p)}` : undefined;
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 const basename = (p?: string) => p?.split(/[\\/]/).pop();
-const tabs = ["Thiết lập", "Footage", "Kịch bản", "Timeline", "Xuất video"];
+const tabs = ["Thiết lập", "Footage", "Kịch bản", "Xuất video"];
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -68,7 +69,6 @@ function App() {
   const [progress, setProgress] = useState<Progress>();
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState<string>();
   const [musicPreview, setMusicPreview] = useState<string>();
   useEffect(() => {
     if (!api || busy || (!project.title.trim() && !project.assets.length))
@@ -157,7 +157,7 @@ function App() {
       setProject(p);
       setProjects((prev) => [p, ...prev.filter((x) => x.id !== p.id)]);
       if (action === "script") setTab(2);
-      if (action === "render") setTab(4);
+      if (action === "render") setTab(3);
       setNotice(p.outputNotice || "Hoàn tất. Dự án đã được lưu.");
     });
   }
@@ -186,17 +186,12 @@ function App() {
       p = await api!.render(p);
       setProject(p);
       await save(p);
-      setTab(4);
+      setTab(3);
     });
   }
-  const validAssets = project.assets.filter((a) => !a.error);
-  const selected =
-    validAssets.find((a) => a.id === selectedAsset) ||
-    validAssets.find((a) => a.id === project.beats[0]?.assetId) ||
-    validAssets[0];
+  const validAssets = project.assets.filter((a) => !a.error && !a.placeholder);
   const hasVoice =
     project.voicePath && project.voiceSignature === voiceSignature(project);
-  const duration = project.beats.reduce((n, b) => n + b.durationMs, 0);
   const readiness = [
     !!project.title.trim(),
     !!validAssets.length,
@@ -778,6 +773,7 @@ function App() {
                               </div>
                             </div>
                           </div>
+                          <div className="info-note">Text CapCut: lề trái/phải 110 px, vùng X = 110–970 px (rộng 860 px) trên khung 1080 px. Các tỉ lệ khác dùng lề tương ứng.</div>
                           <div className="two-cols">
                             <label>
                               Lời kêu gọi hành động
@@ -929,86 +925,14 @@ function App() {
                     {tab === 1 && (
                       <section className="card">
                         <FootageAnalyzer api={api} project={project} busy={busy} />
-                        <div className="section-heading">
-                          <div className="section-icon">
-                            <FolderOpen size={20} />
-                          </div>
-                          <div>
-                            <h2>Thư viện footage</h2>
-                            <p>
-                              {validAssets.length} hợp lệ ·{" "}
-                              {project.assets.length - validAssets.length} file
-                              lỗi · Phân tích theo shot
-                            </p>
-                          </div>
-                          <button
-                            className="secondary"
-                            onClick={() => step("analyze")}
-                          >
-                            <Sparkles size={16} />
-                            Phân tích AI
-                          </button>
-                        </div>
-                        <div className="info-note">
-                          Phân tích từng shot bằng FFmpeg, PySceneDetect và OpenAI. Kết quả lưu SQLite, dùng chung giữa các dự án.
-                        </div>
-                        {!project.assets.length ? (
-                          <div className="empty-state">
-                            <FolderOpen size={38} />
-                            <h3>Thêm những thước phim đầu tiên</h3>
-                            <button
-                              className="secondary"
-                              onClick={() => setTab(0)}
-                            >
-                              Về thiết lập dự án
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="asset-grid">
-                            {project.assets.map((a) => (
-                              <div
-                                className={`asset-card ${a.error ? "invalid" : ""}`}
-                                key={a.id}
-                              >
-                                <button
-                                  className="asset-thumb"
-                                  onClick={() => setSelectedAsset(a.id)}
-                                >
-                                  {a.thumbnail ? (
-                                    <img src={media(a.thumbnail)} />
-                                  ) : (
-                                    <Film size={28} />
-                                  )}
-                                  <span>
-                                    {a.error
-                                      ? "Lỗi"
-                                      : a.kind === "image"
-                                        ? "Ảnh tĩnh"
-                                        : seconds(a.durationMs)}
-                                  </span>
-                                </button>
-                                <h3 title={a.name}>{a.name}</h3>
-                                <p>{a.error || `${a.width} × ${a.height}`}</p>
-                                <p className="asset-description">
-                                  {a.description ||
-                                    (!a.error ? "Chưa phân tích nội dung" : "")}
-                                </p>
-                                <button
-                                  className="text-button"
-                                  onClick={() => {
-                                    update({
-                                      assets: project.assets.filter(
-                                        (x) => x.id !== a.id,
-                                      ),
-                                    });
-                                  }}
-                                >
-                                  Gỡ khỏi dự án
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {!project.assets.length && <div className="empty-state">
+                          <FolderOpen size={38} />
+                          <h3>Chưa có footage</h3>
+                          <button className="secondary" onClick={() => setTab(0)}>Nhập footage trong Thiết lập</button>
+                        </div>}
+                        {project.assets.some(a => a.error) && <div className="alert error">
+                          {project.assets.filter(a => a.error).map(a => <p key={a.id}>{a.name}: {a.error}</p>)}
+                        </div>}
                       </section>
                     )}
                     {tab === 2 && (
@@ -1062,9 +986,47 @@ function App() {
                             onClick={() => step("script")}
                           >
                             <WandSparkles size={16} />
-                            Viết kịch bản
+                            {project.scriptInput?.trim() ? "Chia cảnh từ kịch bản đã nhập" : "Viết kịch bản"}
                           </button>
                         </div>
+                        <label className="script-switch-row">
+                          <span>Không lặp cảnh (thiếu cảnh sẽ yêu cầu bổ sung footage)</span>
+                          <span className="script-switch"><input type="checkbox" role="switch" checked={project.avoidRepeatedShots !== false} disabled={busy} onChange={e => update({ avoidRepeatedShots: e.target.checked })} /><span className="script-switch-track" aria-hidden="true" /></span>
+                        </label>
+                        <label className="script-switch-row">
+                          <span>Yêu cầu footage phù hợp với kịch bản; báo bổ sung nếu thiếu</span>
+                          <span className="script-switch"><input type="checkbox" role="switch" checked={project.requireMatchingFootage ?? !project.allowIllustrativeFootage} disabled={busy} onChange={e => update({ requireMatchingFootage: e.target.checked, allowIllustrativeFootage: !e.target.checked })} /><span className="script-switch-track" aria-hidden="true" /></span>
+                        </label>
+                        <p className="muted">Bật: bổ sung footage hoặc mở Footage để phân tích lại shot. Tắt: dùng footage hiện có làm minh họa, ghi chú những chỗ chưa khớp và giữ nguyên lời nhập.</p>
+                        <label className="script-switch-row">
+                          <span>Dùng ảnh placeholder cho cảnh thiếu footage (thay sau trong CapCut)</span>
+                          <span className="script-switch"><input type="checkbox" role="switch" checked={!!project.useFootagePlaceholders} disabled={busy} onChange={e => {
+                            const enabled = e.target.checked;
+                            void run(async () => {
+                              if (!api?.preparePlaceholders) throw new Error("Hãy đóng và mở lại ứng dụng để nạp tùy chọn placeholder.");
+                              const next = await api.preparePlaceholders({ ...project, useFootagePlaceholders: enabled });
+                              setProject(next);
+                              setNotice(next.outputNotice || (enabled ? "Đã bật placeholder cho các cảnh thiếu footage." : "Đã tắt placeholder; các cảnh thiếu hình đang chờ bổ sung."));
+                            });
+                          }} /><span className="script-switch-track" aria-hidden="true" /></span>
+                        </label>
+                        <p className="muted">Giữ nguyên lời đọc và thời lượng. Ảnh placeholder sẽ nằm trên track hình trong CapCut để bạn thay bằng footage thật.</p>
+                        <label className="script-switch-row">
+                          <span>Blurred Background Fill — giữ trọn hình gốc, nền mờ</span>
+                          <span className="script-switch"><input type="checkbox" role="switch" checked={project.backgroundFill === "blur"} disabled={busy} onChange={e => update({ backgroundFill: e.target.checked ? "blur" : "crop" })} /><span className="script-switch-track" aria-hidden="true" /></span>
+                        </label>
+                        <p className="muted">Bật: giữ trọn hình ở giữa, dùng video nhân bản làm mờ phía sau. Tắt: crop đầy khung hình. Áp dụng khi xuất MP4 và CapCut.</p>
+                        {error.includes("NEEDS_INPUT") && <div className="export-actions">
+                          <button className="secondary" onClick={() => setTab(0)}>Bổ sung footage</button>
+                          <button className="secondary" onClick={() => setTab(1)}>Xem / phân tích lại footage</button>
+                          <button className="secondary" disabled={busy} onClick={() => update({ requireMatchingFootage: false, allowIllustrativeFootage: true })}>Dùng footage hiện có (rồi bấm chia cảnh)</button>
+                        </div>}
+                        <label>Kịch bản có sẵn (tùy chọn)
+                          <textarea rows={8} maxLength={20000} disabled={busy} value={project.scriptInput || ""}
+                            placeholder="Dán lời đọc hoặc kịch bản của bạn vào đây. Ví dụ: Nếu là khách hàng, bạn sẽ chấm chất lượng ở hình ảnh hay ở cách xử lý tình huống?"
+                            onChange={e => update({ scriptInput: e.target.value })} />
+                          <small>Giữ nguyên lời nhập, tự chia cảnh và chọn footage. Để trống để AI viết từ tiêu đề và brief. Bấm nút chia cảnh để áp dụng; chỉnh ô này chưa thay đổi các cảnh hiện có.</small>
+                        </label>
                         {!project.beats.length ? (
                           <div className="empty-state">
                             <Subtitles size={38} />
@@ -1076,13 +1038,13 @@ function App() {
                           </div>
                         ) : (
                           project.beats.map((b, i) => (
-                            <div className="beat-editor" key={b.id}>
+                            <div className={`beat-editor scene-card ${b.missingFootage || !b.assetId ? "scene-card-pending" : ""}`} key={b.id} role="group" aria-label={`Phân cảnh ${i+1}`}>
                               <div className="beat-title">
                                 <span>
-                                  BEAT {String(i + 1).padStart(2, "0")}
+                                  Phân cảnh {String(i + 1).padStart(2, "0")}
                                 </span>
                                 <button
-                                  aria-label="Xóa cảnh"
+                                  aria-label={`Xóa phân cảnh ${i+1}`} title="Xóa phân cảnh"
                                   onClick={() =>
                                     update({
                                       beats: project.beats.filter(
@@ -1094,200 +1056,24 @@ function App() {
                                 >
                                   <X size={14} />
                                 </button>
-                                <small>
+                                <small className="scene-status">
                                   {seconds(b.durationMs)} ·{" "}
-                                  {hasVoice ? "Đã căn voice" : "Timing tạm"}
+                                  {b.placeholderFor ? "Placeholder · Thay trong CapCut" : b.missingFootage || !b.assetId ? "Chờ footage" : hasVoice ? "Đã căn voice" : "Đã chọn footage · Timing tạm"}
                                 </small>
                               </div>
-                              <label>
-                                Lời ElevenLabs
-                                <textarea
-                                  rows={2}
-                                  value={b.voice}
-                                  onChange={(e) =>
-                                    update({
-                                      beats: project.beats.map((x) =>
-                                        x.id === b.id
-                                          ? { ...x, voice: e.target.value }
-                                          : x,
-                                      ),
-                                    })
-                                  }
-                                />
-                              </label>
-                              <div className="two-cols">
-                                <label>
-                                  Phụ đề
-                                  <textarea
-                                    rows={2}
-                                    value={b.caption}
-                                    onChange={(e) =>
-                                      update({
-                                        captionCues: undefined,
-                                        beats: project.beats.map((x) =>
-                                          x.id === b.id
-                                            ? { ...x, caption: e.target.value }
-                                            : x,
-                                        ),
-                                      })
-                                    }
-                                  />
-                                </label>
-                                <label>
-                                  Thẻ từ khóa
-                                  <textarea
-                                    rows={2}
-                                    value={b.overlay}
-                                    onChange={(e) =>
-                                      update({
-                                        beats: project.beats.map((x) =>
-                                          x.id === b.id
-                                            ? { ...x, overlay: e.target.value }
-                                            : x,
-                                        ),
-                                      })
-                                    }
-                                  />
-                                </label>
-                              </div>
-                              <label>
-                                Cảnh minh họa
-                                <select
-                                  value={b.assetId}
-                                  onChange={(e) =>
-                                    update({
-                                      beats: project.beats.map((x) =>
-                                        x.id === b.id
-                                          ? {
-                                              ...x,
-                                              assetId: e.target.value,
-                                              sourceInMs: 0,
-                                            }
-                                          : x,
-                                      ),
-                                    })
-                                  }
-                                >
-                                  {validAssets.map((a) => (
-                                    <option key={a.id} value={a.id}>
-                                      {a.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
-                          ))
-                        )}
-                        {project.beats.length > 0 && (
-                          <button
-                            className="primary"
-                            onClick={() => step("voice")}
-                          >
-                            <AudioLines size={17} />
-                            Tạo voice ElevenLabs
-                          </button>
-                        )}
-                        {hasVoice && (
-                          <div
-                            className="info-note"
-                            style={{ flexDirection: "column" }}
-                          >
-                            <strong>
-                              Voice đã tạo ·{" "}
-                              {seconds(project.voiceDurationMs || 0)}
-                            </strong>
-                            <audio
-                              controls
-                              src={media(project.voicePath)}
-                              style={{ width: "100%" }}
-                            />
-                          </div>
-                        )}
-                        {project.flags.map((f, i) => (
-                          <div key={i} className="info-note">
-                            {f}
-                          </div>
-                        ))}
-                      </section>
-                    )}
-                    {tab === 3 && (
-                      <section className="card">
-                        <div className="section-heading">
-                          <div className="section-icon">
-                            <Clock3 size={20} />
-                          </div>
-                          <div>
-                            <h2>Timeline dựng</h2>
-                            <p>
-                              {hasVoice
-                                ? "Cảnh đã được căn theo audio."
-                                : "Thời gian tạm · cần tạo voice để chốt timing."}
-                            </p>
-                          </div>
-                          <span className="tag">
-                            {seconds(
-                              duration +
-                                (project.outro
-                                  ? project.outroDurationMs || 0
-                                  : 0),
-                            )}{" "}
-                            / {project.duration}s
-                          </span>
-                        </div>
-                        {!project.beats.length ? (
-                          <div className="empty-state">
-                            <Clock3 size={38} />
-                            <h3>Chưa có cảnh trên timeline</h3>
-                            <p>Tạo kịch bản để lên thứ tự cảnh.</p>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="timeline-strip">
-                              {project.beats.map((b, i) => (
-                                <button
-                                  key={b.id}
-                                  style={{ flex: b.durationMs }}
-                                  onClick={() => setSelectedAsset(b.assetId)}
-                                  title={b.voice}
-                                >
-                                  <span>{String(i + 1).padStart(2, "0")}</span>
-                                  <small>{seconds(b.durationMs)}</small>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="audio-track">
-                              <AudioLines size={18} />
-                              {hasVoice
-                                ? "Voice ElevenLabs · Đã căn timestamp"
-                                : "Chưa có voice"}
-                            </div>
-                            {project.outro && (
-                              <div className="info-note">
-                                <Film size={17} />
-                                <span>
-                                  Outro: {basename(project.outro)}
-                                  {project.outroDurationMs
-                                    ? ` · ${seconds(project.outroDurationMs)} cuối video`
-                                    : " · Sẽ đọc thời lượng khi xuất"}
-                                  . Phần nội dung được căn trước outro.
-                                </span>
-                              </div>
-                            )}
-                            <div className="timeline-list">
-                              {timeline(project).map((b, i) => (
-                                <div key={b.id} className="timeline-item">
-                                  <span className="timecode">
-                                    {seconds(b.timelineInMs)}
-                                    <br />
-                                    <small>{seconds(b.timelineOutMs)}</small>
-                                  </span>
-                                  <div>
-                                    <b>
-                                      {project.assets.find(
-                                        (a) => a.id === b.assetId,
-                                      )?.name || "Thiếu footage"}
-                                    </b>
-                                    <p>{b.voice}</p>
+                              <div className="scene-body">
+                                <div className="scene-media">
+                                  <ScenePreview api={api} key={`${b.assetId}:${b.sourceInMs}:${b.durationMs}`} asset={project.assets.find(a => a.id === b.assetId)} beat={b} />
+                                </div>
+                                <div className="scene-fields">
+                                  <label>
+                                    Mô tả cảnh / Footage cần chọn
+                                    <textarea rows={3} maxLength={20000}
+                                      value={sceneDescription(b, project.assets.find(a => a.id === b.assetId))}
+                                      onChange={e => update({ beats: project.beats.map(x => x.id === b.id ? { ...x, sceneDescription: e.target.value } : x) })}
+                                      placeholder="Ví dụ: Cận cảnh kỹ thuật viên kiểm tra thiết bị, sau đó trung cảnh cả đội phối hợp tại sân khấu." />
+                                    <small className="field-hint">Ghi chú chọn hình; không đưa vào voice hoặc phụ đề. Có thể chỉnh theo footage bạn muốn tìm.</small>
+                                  </label>
                                     <div className="timing-fields">
                                       <label>
                                         Điểm bắt đầu nguồn (s)
@@ -1344,51 +1130,144 @@ function App() {
                                         />
                                       </label>
                                     </div>
-                                  </div>
-                                  <div className="reorder">
-                                    <button
-                                      aria-label="Chuyển cảnh lên"
-                                      disabled={i === 0}
-                                      onClick={() => {
-                                        const beats = [...project.beats];
-                                        [beats[i - 1], beats[i]] = [
-                                          beats[i],
-                                          beats[i - 1],
-                                        ];
-                                        update({
-                                          beats,
-                                          captionCues: undefined,
-                                        });
-                                      }}
-                                    >
-                                      <ArrowLeft size={15} />
-                                    </button>
-                                    <button
-                                      aria-label="Chuyển cảnh xuống"
-                                      disabled={i === project.beats.length - 1}
-                                      onClick={() => {
-                                        const beats = [...project.beats];
-                                        [beats[i + 1], beats[i]] = [
-                                          beats[i],
-                                          beats[i + 1],
-                                        ];
-                                        update({
-                                          beats,
-                                          captionCues: undefined,
-                                        });
-                                      }}
-                                    >
-                                      <ArrowRight size={15} />
-                                    </button>
-                                  </div>
+                              <FootagePicker api={api} assets={project.assets} beat={b} disabled={busy} onAssign={(asset,startMs)=>{
+                                if(project.avoidRepeatedShots !== false) {
+                                  const duplicate=project.beats.find(x=>x.id!==b.id && project.assets.find(a=>a.id===x.assetId)?.path===asset.path && (asset.kind==="image" || (startMs<x.sourceInMs+x.durationMs && startMs+b.durationMs>x.sourceInMs)));
+                                  if(duplicate) throw new Error("Đoạn này trùng footage của cảnh khác. Chọn đoạn khác hoặc tắt Không lặp cảnh.");
+                                }
+                                update({beats:project.beats.map(x=>x.id===b.id?{...x,sceneDescription:sceneDescription(x,project.assets.find(a=>a.id===x.assetId)),assetId:asset.id,sourceInMs:startMs,missingFootage:undefined,placeholderFor:undefined,usePlaceholder:false,placeholderSource:undefined}:x),outputNotice:undefined});
+                                setNotice(`Đã chọn thủ công footage cho cảnh ${i+1}; không gọi AI phân tích lại.`);
+                              }} />
+                              {b.missingFootage && <div className="info-note" style={{display:"block"}}>
+                                <strong>Cảnh {i+1} — Chờ bổ sung footage</strong>
+                                <p>Cần hình: {b.missingFootage.suggestedFootage}</p>
+                                <p>{b.missingFootage.reason} · Cần tối thiểu {seconds(b.durationMs)}</p>
+                                {b.missingFootage.reanalyzeSuggestion && <p>Gợi ý phân tích lại: {b.missingFootage.reanalyzeSuggestion}</p>}
+                                <div className="missing-footage-actions">
+                                <button className="primary" disabled={busy} onClick={() => run(async () => {
+                                  const imported = await api!.importFootage(true);
+                                  if(!imported.length) return;
+                                  const a=imported[0];
+                                  if(a.error) throw new Error(a.error);
+                                  if(a.kind === "video" && a.durationMs < b.durationMs) throw new Error(`Video dài ${seconds(a.durationMs)}, cảnh cần ${seconds(b.durationMs)}. Hãy chọn video dài hơn.`);
+                                  const existing=project.assets.find(x=>x.path===a.path);
+                                  const chosen=existing || a;
+                                  const next={...project,assets:existing?project.assets:[...project.assets,a],beats:project.beats.map(x=>x.id===b.id?{...x,sceneDescription:sceneDescription(x,project.assets.find(a=>a.id===x.assetId)),assetId:chosen.id,sourceInMs:0,missingFootage:undefined,placeholderFor:undefined,usePlaceholder:false,placeholderSource:undefined}:x),output:undefined,outputNotice:undefined};
+                                  update(next);
+                                  await save(next);
+                                  setNotice(`Đã gán ${a.name} cho cảnh ${i+1}. Các cảnh khác được giữ nguyên.`);
+                                })}>Chọn file bổ sung cho cảnh này</button>
+                                <button className="secondary" onClick={()=>setTab(1)}>Xem / phân tích lại footage</button>
                                 </div>
-                              ))}
+                              </div>}
+
+                              <label>
+                                Lời ElevenLabs
+                                <textarea
+                                  rows={2}
+                                  value={b.voice}
+                                  onChange={(e) =>
+                                    update({
+                                      beats: project.beats.map((x) =>
+                                        x.id === b.id
+                                          ? { ...x, voice: e.target.value }
+                                          : x,
+                                      ),
+                                    })
+                                  }
+                                />
+                              </label>
+                              <div className="two-cols">
+                                <label>
+                                  Phụ đề
+                                  <textarea
+                                    rows={2}
+                                    value={b.caption}
+                                    onChange={(e) =>
+                                      update({
+                                        captionCues: undefined,
+                                        beats: project.beats.map((x) =>
+                                          x.id === b.id
+                                            ? { ...x, caption: e.target.value }
+                                            : x,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </label>
+                                <label>
+                                  Thẻ từ khóa
+                                  <textarea
+                                    rows={2}
+                                    value={b.overlay}
+                                    onChange={(e) =>
+                                      update({
+                                        beats: project.beats.map((x) =>
+                                          x.id === b.id
+                                            ? { ...x, overlay: e.target.value }
+                                            : x,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </label>
+                              </div>
+                              <label className="script-switch-row">
+                                <span>Dùng placeholder cho phân cảnh này</span>
+                                <span className="script-switch"><input type="checkbox" role="switch"
+                                  checked={!!project.assets.find(a => a.id === b.assetId)?.placeholder} disabled={busy}
+                                  onChange={e => {
+                                    const enabled = e.target.checked;
+                                    void run(async () => {
+                                      if (!api?.preparePlaceholders) throw new Error("Hãy đóng và mở lại ứng dụng để nạp tùy chọn placeholder.");
+                                      const next = await api.preparePlaceholders({ ...project, beats: project.beats.map(x => x.id === b.id ? {
+                                        ...x, usePlaceholder: enabled,
+                                        sceneDescription: sceneDescription(x, project.assets.find(a => a.id === x.assetId)),
+                                      } : x) });
+                                      setProject(next);
+                                      setNotice(enabled ? `Cảnh ${i + 1} đã dùng placeholder để thay footage trong CapCut.` : `Đã tắt placeholder cho cảnh ${i + 1}.`);
+                                    });
+                                  }} /><span className="script-switch-track" aria-hidden="true" /></span>
+                              </label>
                             </div>
-                          </>
+                                </div>
+                              </div>
+                          ))
                         )}
+                        {project.beats.length > 0 && (
+                          <button
+                            className="primary"
+                            onClick={() => step("voice")}
+                            disabled={project.beats.some(b => !b.assetId || b.missingFootage)}
+                          >
+                            <AudioLines size={17} />
+                            Tạo voice ElevenLabs
+                          </button>
+                        )}
+                        {hasVoice && (
+                          <div
+                            className="info-note"
+                            style={{ flexDirection: "column" }}
+                          >
+                            <strong>
+                              Voice đã tạo ·{" "}
+                              {seconds(project.voiceDurationMs || 0)}
+                            </strong>
+                            <audio
+                              controls
+                              src={media(project.voicePath)}
+                              style={{ width: "100%" }}
+                            />
+                          </div>
+                        )}
+                        {project.flags.map((f, i) => (
+                          <div key={i} className="info-note">
+                            {f}
+                          </div>
+                        ))}
                       </section>
                     )}
-                    {tab === 4 && (
+                    {tab === 3 && (
                       <section className="card">
                         <div className="section-heading">
                           <div className="section-icon">
@@ -1509,7 +1388,7 @@ function App() {
                           Quay lại
                         </button>
                       )}
-                      {tab < 4 && (
+                      {tab < tabs.length - 1 && (
                         <button
                           className="secondary"
                           onClick={() => setTab(tab + 1)}
@@ -1521,118 +1400,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <aside className="preview-column">
-                  <section className="card preview-card">
-                    <div className="preview-heading">
-                      <span>
-                        <MonitorPlay size={16} />
-                        Khung xem trước
-                      </span>
-                      <span className="tag">{project.ratio}</span>
-                    </div>
-                    <div
-                      className={`phone-preview ratio-${project.ratio.replace(":", "-")}`}
-                    >
-                      {project.output ? (
-                        <video
-                          key={project.output}
-                          src={media(project.output)}
-                          controls
-                        />
-                      ) : selected ? (
-                        <>
-                          {selected.kind === "video" ? (
-                            <video
-                              key={selected.id}
-                              src={media(selected.path)}
-                              poster={media(selected.thumbnail)}
-                              controls
-                            />
-                          ) : (
-                            <img src={media(selected.path)} />
-                          )}
-                          <div className="source-label">FOOTAGE GỐC</div>
-                        </>
-                      ) : (
-                        <div className="preview-placeholder">
-                          <div className="frame-corners">
-                            <Clapperboard size={35} />
-                          </div>
-                          <h3>
-                            Câu chuyện của bạn
-                            <br />
-                            sắp thành hình.
-                          </h3>
-                          <p>
-                            Thêm footage để bắt đầu
-                            <br />
-                            hành trình sáng tạo.
-                          </p>
-                          <span>THE HBG OFFICIAL</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="preview-meta">
-                      <span>
-                        <span className="tiny-dot" />
-                        {project.output
-                          ? "Bản MP4 đã xuất"
-                          : selected
-                            ? "Xem nguồn · chưa phải bản dựng"
-                            : "Chưa có footage"}
-                      </span>
-                      <span>{project.duration}s · 30 fps</span>
-                    </div>
-                  </section>
-                  <section className="preset-card">
-                    <div className="preset-top">
-                      <span className="sparkle-box">
-                        <Sparkles size={18} />
-                      </span>
-                      <div>
-                        <h3>The HBG Signature</h3>
-                        <span>PRESET THƯƠNG HIỆU</span>
-                      </div>
-                      <CheckCircle2 size={18} />
-                    </div>
-                    <div className="preset-row">
-                      <span>Nhịp dựng</span>
-                      <b>2–4 giây / cảnh</b>
-                    </div>
-                    <div className="preset-row">
-                      <span>Giọng đọc</span>
-                      <b>Tiếng Việt</b>
-                    </div>
-                    <div className="preset-row">
-                      <span>Phụ đề</span>
-                      <b>
-                        {project.category === "event"
-                          ? "Tiếng Anh"
-                          : "Tiếng Việt"}
-                      </b>
-                    </div>
-                    <div className="palette">
-                      <i />
-                      <i />
-                      <i />
-                      <span>Xanh. Vàng. Chất HBG.</span>
-                    </div>
-                  </section>
-                  <div className="readiness">
-                    {[
-                      "Ý tưởng đã sẵn sàng",
-                      "Đã có footage",
-                      "Footage được phân tích",
-                      "Kịch bản đã tạo",
-                      "Voice đã đồng bộ",
-                      "MP4 đã xuất",
-                    ].map((s, i) => (
-                      <div key={s} className={readiness[i] ? "ready" : ""}>
-                        <CheckCircle2 size={15} />
-                        {s}
-                      </div>
-                    ))}
-                  </div>
+                <div className="editor-bottom-actions">
                   <button
                     className="generate-button"
                     disabled={busy}
@@ -1646,12 +1414,7 @@ function App() {
                     Tạo video
                     <ArrowRight size={18} />
                   </button>
-                  <p className="generate-hint">
-                    Từ footage đến bản dựng, trong một luồng.
-                    <br />
-                    Sử dụng OpenAI & ElevenLabs của bạn.
-                  </p>
-                </aside>
+                </div>
               </div>
             </>
           )}
@@ -1697,6 +1460,26 @@ function SettingsModal({
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [configNotice, setConfigNotice] = useState("");
+  const [includeKeys, setIncludeKeys] = useState(false);
+  async function transferConfig(action: "export" | "import") {
+    setSaving(true); setError(""); setConfigNotice("");
+    try {
+      if (!api?.exportSettings || !api?.importSettings) throw new Error("Hãy đóng và mở lại ứng dụng để nạp chức năng config.");
+      if (action === "export") {
+        const file = await api.exportSettings(form, includeKeys);
+        if (file) setConfigNotice(`Đã xuất config: ${file}`);
+      } else {
+        const next = await api.importSettings();
+        if (next) {
+          saved(next);
+          setForm({ geminiKey: "", openaiKey: "", elevenKey: "", geminiModel: next.geminiModel, model: next.model, voiceId: next.voiceId, voiceModel: next.voiceModel });
+          setConfigNotice("Đã nhập và lưu cấu hình. Các API keys không có trong file được giữ nguyên.");
+        }
+      }
+    } catch (e) { setError((e as Error).message); }
+    finally { setSaving(false); }
+  }
   return (
     <div className="modal-backdrop">
       <section
@@ -1713,6 +1496,7 @@ function SettingsModal({
           <button
             className="icon-button"
             aria-label="Đóng cài đặt"
+            disabled={saving}
             onClick={close}
           >
             <X size={20} />
@@ -1738,7 +1522,19 @@ function SettingsModal({
           }}
         >
           <fieldset disabled={busy || saving}>
-
+            <div className="config-transfer">
+              <strong>Sao lưu / khôi phục config</strong>
+              <p className="muted">Model AI, Voice ID và voice model. Xuất theo các giá trị trong biểu mẫu; nhập sẽ áp dụng và lưu ngay.</p>
+              <label className="script-switch-row">
+                <span>Kèm API keys khi xuất (file sẽ chứa khóa dạng văn bản)</span>
+                <span className="script-switch"><input type="checkbox" role="switch" checked={includeKeys} onChange={e => setIncludeKeys(e.target.checked)} /><span className="script-switch-track" aria-hidden="true" /></span>
+              </label>
+              <div className="export-actions">
+                <button type="button" className="secondary" onClick={() => transferConfig("export")}><Download size={16} /> Xuất config</button>
+                <button type="button" className="secondary" onClick={() => transferConfig("import")}><Upload size={16} /> Nhập config</button>
+              </div>
+              {configNotice && <p role="status">{configNotice}</p>}
+            </div>
             <label>
               OpenAI API key{" "}
               <span className="configured">

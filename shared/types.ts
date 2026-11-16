@@ -1,5 +1,6 @@
 export type Category = "event" | "tour";
 export interface Asset {
+  placeholder?: boolean;
   id: string;
   name: string;
   path: string;
@@ -12,6 +13,11 @@ export interface Asset {
   description?: string;
 }
 export interface Beat {
+  usePlaceholder?: boolean;
+  placeholderSource?: { assetId: string; sourceInMs: number };
+  sceneDescription?: string;
+  placeholderFor?: { suggestedFootage: string; reason: string; reanalyzeSuggestion: string };
+  missingFootage?: { suggestedFootage: string; reason: string; reanalyzeSuggestion: string };
   id: string;
   voice: string;
   caption: string;
@@ -21,6 +27,12 @@ export interface Beat {
   sourceInMs: number;
 }
 export interface Project {
+  backgroundFill?: "crop" | "blur";
+  useFootagePlaceholders?: boolean;
+  scriptInput?: string;
+  allowIllustrativeFootage?: boolean;
+  requireMatchingFootage?: boolean;
+  avoidRepeatedShots?: boolean;
   version: 1;
   id: string;
   title: string;
@@ -79,20 +91,25 @@ export interface Progress {
 }
 export interface StudioApi {
   analyzerSnapshot(): Promise<import("./analyzer").AnalyzerSnapshot>;
+  shotPreview(id: string): Promise<string>;
+  scenePreview(request: { file: string; startMs: number; durationMs: number }): Promise<string>;
   analyzerRun(project: Project, options: import("./analyzer").AnalyzerOptions, shotId?: string): Promise<import("./analyzer").AnalyzerSnapshot>;
   analyzerControl(action: "pause" | "resume" | "cancel"): Promise<void>;
   analyzerEdit(id: string, patch: { startMs: number; endMs: number; description: string; tags: string[]; confirmedContext: string; verified: boolean }): Promise<void>;
   analyzerExport(project: Project): Promise<string | undefined>;
   load(): Promise<Project[]>;
   save(project: Project): Promise<void>;
-  importFootage(): Promise<Asset[]>;
+  importFootage(singleFile?: boolean): Promise<Asset[]>;
   selectFile(kind: "logo" | "outro" | "music"): Promise<string | undefined>;
   outroInfo(file: string): Promise<number>;
   defaultMusic(): Promise<string>;
   settings(): Promise<SettingsStatus>;
   saveSettings(settings: Settings): Promise<SettingsStatus>;
+  exportSettings(settings: Settings, includeKeys: boolean): Promise<string | undefined>;
+  importSettings(): Promise<SettingsStatus | undefined>;
   analyze(project: Project): Promise<Project>;
   script(project: Project): Promise<Project>;
+  preparePlaceholders(project: Project): Promise<Project>;
   voice(project: Project): Promise<Project>;
   render(project: Project): Promise<Project>;
   saveVideoCopy(project: Project): Promise<Project>;
@@ -103,6 +120,7 @@ export interface StudioApi {
   onProgress(callback: (progress: Progress) => void): () => void;
 }
 export const createProject = (): Project => ({
+  avoidRepeatedShots: true,
   version: 1,
   id: crypto.randomUUID(),
   title: "",
