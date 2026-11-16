@@ -64,6 +64,6 @@ export const settingsSchema = z.object({
   openaiKey: z.string().max(500),
   elevenKey: z.string().max(500),
   model: z.string().min(1).max(100),
-  voiceId: z.string().max(100),
-  voiceModel: z.string().min(1).max(100),
+  voiceId: z.string().trim().max(100),
+  voiceModel: z.string().trim().min(1).max(100),
 });

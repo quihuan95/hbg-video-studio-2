@@ -47,11 +47,14 @@
       "output": "release"
     },
     "files": [
+      "scripts/analyze-scenes.py",
+      "scripts/requirements-analyzer.txt",
       "dist/**/*",
       "dist-electron/**/*",
       "package.json"
     ],
     "asarUnpack": [
+      "scripts/analyze-scenes.py",
       "node_modules/@ffmpeg-installer/**/*",
       "node_modules/@ffprobe-installer/**/*"
     ],

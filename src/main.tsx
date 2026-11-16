@@ -37,6 +37,7 @@ import {
   type Progress,
 } from "../shared/types";
 import "./styles.css";
+import { FootageAnalyzer } from "./FootageAnalyzer";
 declare global {
   interface Window {
     studio?: StudioApi;
@@ -920,6 +921,7 @@ function App() {
                     )}
                     {tab === 1 && (
                       <section className="card">
+                        <FootageAnalyzer api={api} project={project} busy={busy} />
                         <div className="section-heading">
                           <div className="section-icon">
                             <FolderOpen size={20} />
@@ -929,7 +931,7 @@ function App() {
                             <p>
                               {validAssets.length} hợp lệ ·{" "}
                               {project.assets.length - validAssets.length} file
-                              lỗi · Lấy mẫu 3 frame/video
+                              lỗi · Phân tích theo shot
                             </p>
                           </div>
                           <button
@@ -941,7 +943,7 @@ function App() {
                           </button>
                         </div>
                         <div className="info-note">
-                          Gemini nhận video/ảnh trực tiếp. Kết quả lưu trong SQLite dùng chung mọi dự án; cùng nội dung file sẽ không gọi API lại.
+                          Phân tích từng shot bằng FFmpeg, PySceneDetect và OpenAI. Kết quả lưu SQLite, dùng chung giữa các dự án.
                         </div>
                         {!project.assets.length ? (
                           <div className="empty-state">
@@ -1436,12 +1438,12 @@ function App() {
                           >
                             Xuất timeline JSON + SRT
                           </button>
-                          <button className="secondary" disabled={!project.output} onClick={() => run(async () => {
-                            if (!window.confirm("Đóng draft 1110 trong CapCut trước khi tiếp tục. Draft hiện tại sẽ được sao lưu và thay bằng một clip MP4 đã render. Tiếp tục?")) return;
+                          <button className="secondary" disabled={!project.beats.length} onClick={() => run(async () => {
+                            if (!window.confirm("Đóng draft 1110 trong CapCut trước khi tiếp tục. Draft hiện tại sẽ được sao lưu và thay bằng timeline gồm các clip, voice, nhạc và chữ riêng để chỉnh sửa. Tiếp tục?")) return;
                             const folder = await api!.exportCapCut(project);
-                            setNotice(`Đã xuất draft CapCut (một clip MP4) vào ${folder}. Mở lại draft 1110 trong CapCut.`);
+                            setNotice(`Đã xuất timeline chỉnh sửa vào ${folder}. Mở lại draft 1110 trong CapCut; kiểm tra bố cục chữ và âm lượng trước khi xuất video.`);
                           })}>
-                            Xuất draft CapCut (MP4)
+                            Xuất draft CapCut chỉnh sửa
                           </button>
                         </div>
                         {project.output && (
@@ -1725,9 +1727,7 @@ function SettingsModal({
           }}
         >
           <fieldset disabled={busy || saving}>
-<label>Gemini API key — phân tích video ({status?.geminiConfigured ? "Đã cấu hình" : "Chưa cấu hình"})
-<input type="password" autoComplete="off" value={form.geminiKey} onChange={e => setForm({...form, geminiKey: e.target.value})} placeholder="Để trống để giữ khóa hiện tại" /></label>
-<label>Gemini model<input required value={form.geminiModel} onChange={e => setForm({...form, geminiModel: e.target.value})} /></label>
+
             <label>
               OpenAI API key{" "}
               <span className="configured">

@@ -78,6 +78,11 @@ export interface Progress {
   percent: number;
 }
 export interface StudioApi {
+  analyzerSnapshot(): Promise<import("./analyzer").AnalyzerSnapshot>;
+  analyzerRun(project: Project, options: import("./analyzer").AnalyzerOptions, shotId?: string): Promise<import("./analyzer").AnalyzerSnapshot>;
+  analyzerControl(action: "pause" | "resume" | "cancel"): Promise<void>;
+  analyzerEdit(id: string, patch: { startMs: number; endMs: number; description: string; tags: string[]; confirmedContext: string; verified: boolean }): Promise<void>;
+  analyzerExport(project: Project): Promise<string | undefined>;
   load(): Promise<Project[]>;
   save(project: Project): Promise<void>;
   importFootage(): Promise<Asset[]>;

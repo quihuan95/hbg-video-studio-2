@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { StudioApi } from "../shared/types";
 const api: StudioApi = {
+  analyzerSnapshot: () => ipcRenderer.invoke("analyzer:snapshot"),
+  analyzerRun: (p, o, id) => ipcRenderer.invoke("analyzer:run", p, o, id),
+  analyzerControl: action => ipcRenderer.invoke("analyzer:control", action),
+  analyzerEdit: (id, patch) => ipcRenderer.invoke("analyzer:edit", id, patch),
+  analyzerExport: p => ipcRenderer.invoke("analyzer:export", p),
   load: () => ipcRenderer.invoke("projects:load"),
   save: (p) => ipcRenderer.invoke("projects:save", p),
   importFootage: () => ipcRenderer.invoke("assets:import"),
