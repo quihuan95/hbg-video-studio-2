@@ -56,6 +56,13 @@ function App() {
   const [tab, setTab] = useState(0);
   const [view, setView] = useState<"editor" | "projects" | "style">("editor");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [capcutPath, setCapcutPath] = useState(() => {
+    try { return localStorage.getItem("hbg-capcut-draft-path") || "C:\\Users\\Admin\\AppData\\Local\\CapCut\\User Data\\Projects\\com.lveditor.draft\\1110"; }
+    catch { return ""; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("hbg-capcut-draft-path", capcutPath); } catch { /* Storage may be unavailable. */ }
+  }, [capcutPath]);
   const [status, setStatus] = useState<SettingsStatus>();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress>();
@@ -1438,10 +1445,14 @@ function App() {
                           >
                             Xuất timeline JSON + SRT
                           </button>
-                          <button className="secondary" disabled={!project.beats.length} onClick={() => run(async () => {
-                            if (!window.confirm("Đóng draft 1110 trong CapCut trước khi tiếp tục. Draft hiện tại sẽ được sao lưu và thay bằng timeline gồm các clip, voice, nhạc và chữ riêng để chỉnh sửa. Tiếp tục?")) return;
-                            const folder = await api!.exportCapCut(project);
-                            setNotice(`Đã xuất timeline chỉnh sửa vào ${folder}. Mở lại draft 1110 trong CapCut; kiểm tra bố cục chữ và âm lượng trước khi xuất video.`);
+                          <label style={{ flexBasis: "100%" }}>Thư mục draft CapCut
+                            <input value={capcutPath} onChange={e => setCapcutPath(e.target.value)} placeholder="C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\Tên dự án" />
+                            <small>Thư mục dự án đã tạo trong CapCut, chứa draft_content.json và draft_meta_info.json.</small>
+                          </label>
+                          <button className="secondary" disabled={!project.beats.length || !capcutPath.trim()} onClick={() => run(async () => {
+                            if (!window.confirm(`Đóng draft trong CapCut trước khi tiếp tục. Xuất vào: ${capcutPath.trim()}\nDraft hiện tại sẽ được sao lưu và thay bằng timeline chỉnh sửa. Tiếp tục?`)) return;
+                            const folder = await api!.exportCapCut(project, capcutPath.trim());
+                            setNotice(`Đã xuất timeline chỉnh sửa vào ${folder}. Mở lại draft này trong CapCut; kiểm tra bố cục chữ và âm lượng trước khi xuất video.`);
                           })}>
                             Xuất draft CapCut chỉnh sửa
                           </button>

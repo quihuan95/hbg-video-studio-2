@@ -5,9 +5,13 @@ import { capcutTimeline } from "./capcut-timeline";
 import { validateTimeline } from "../shared/video";
 import type { Project } from "../shared/types";
 
-const target = "C:/Users/Admin/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft/1110";
-
-export async function exportCapCut(p: Project, musicDurationMs = 0): Promise<string> {
+export async function exportCapCut(p: Project, destination: string, musicDurationMs = 0): Promise<string> {
+  if (!path.isAbsolute(destination.trim())) throw new Error("Hãy nhập đường dẫn tuyệt đối đến thư mục draft CapCut.");
+  const target = path.resolve(destination.trim());
+  for (const name of ["draft_content.json", "draft_meta_info.json"]) {
+    try { await fs.access(path.join(target, name)); }
+    catch { throw new Error(`Thư mục draft không hợp lệ: thiếu ${name}. Hãy chọn thư mục dự án CapCut, không phải thư mục chứa tất cả dự án.`); }
+  }
   validateTimeline(p, !!p.voicePath);
   const contentPath = path.join(target, "draft_content.json");
   const metaPath = path.join(target, "draft_meta_info.json");

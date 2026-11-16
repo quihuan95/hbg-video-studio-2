@@ -1217,7 +1217,8 @@ app
     handle("job:save-video-copy", (p) => job(p, saveVideoCopy));
     handle("job:cancel", () => controller?.abort());
     handle("project:export", (raw) => exportPlan(projectSchema.parse(raw)));
-    handle("project:capcut", async raw => {
+    handle("project:capcut", async (raw, destination) => {
+      const draftPath = z.string().trim().min(1).max(32768).parse(destination);
       const p=projectSchema.parse(raw);
       for(const a of p.assets) check(a.path);
       for(const f of [p.voicePath,p.logo,p.outro,p.musicPath]) if(f) check(f);
@@ -1228,7 +1229,7 @@ app
         musicDuration=Math.round(Number((await probe(p.musicPath)).format.duration)*1000);
         if(!Number.isFinite(musicDuration) || musicDuration<=0)throw new Error("Không đọc được thời lượng nhạc nền.");
       }
-      return exportCapCut(p,musicDuration);
+      return exportCapCut(p,draftPath,musicDuration);
     });
     handle("file:reveal", (p) =>
       shell.showItemInFolder(check(z.string().parse(p))),

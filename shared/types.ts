@@ -97,7 +97,7 @@ export interface StudioApi {
   render(project: Project): Promise<Project>;
   saveVideoCopy(project: Project): Promise<Project>;
   exportPlan(project: Project): Promise<string | undefined>;
-  exportCapCut(project: Project): Promise<string>;
+  exportCapCut(project: Project, destination: string): Promise<string>;
   cancel(): Promise<void>;
   reveal(path: string): Promise<void>;
   onProgress(callback: (progress: Progress) => void): () => void;
